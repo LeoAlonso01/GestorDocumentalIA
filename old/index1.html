@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Documentos con IA</title>
+    <!-- Carga de Tailwind CSS para estilos -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Carga de la fuente Inter -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        /* Clase para el fondo del modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Contenedor Principal de la Aplicación (Oculto hasta autenticación) -->
+    <div id="app-container" class="min-h-screen p-4 sm:p-8 hidden">
+        <header class="text-center mb-10 flex flex-col sm:flex-row justify-between items-center">
+            <div class="text-left">
+                <h1 class="text-3xl font-bold text-gray-800">Gestor de Documentos Departamental</h1>
+                <p class="text-gray-500">Sube un documento, procesa con IA y registra.</p>
+            </div>
+            <div class="mt-4 sm:mt-0 text-right">
+                <p class="text-sm text-gray-600 mb-2">
+                    **ID de Usuario:** <span id="user-id-display" class="font-mono text-xs bg-gray-200 p-1 rounded">Cargando...</span>
+                </p>
+                <button id="logout-btn" onclick="signOutUser()" class="px-4 py-2 bg-red-500 text-white font-medium rounded-lg shadow-md hover:bg-red-600 transition duration-150">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </header>
+
+        <main class="max-w-4xl mx-auto">
+
+            <!-- Sección de Carga y Procesamiento -->
+            <section class="bg-white p-6 rounded-xl shadow-lg mb-8">
+                <h2 class="text-xl font-semibold mb-4 text-indigo-700">Paso 1: Cargar y Analizar Documento</h2>
+                
+                <div class="space-y-4">
+                    <!-- Input de Archivo -->
+                    <label class="block">
+                        <span class="text-sm font-medium text-gray-700">Seleccionar Imagen del Documento (PNG/JPG)</span>
+                        <input type="file" id="document-upload" accept="image/png, image/jpeg" class="mt-1 block w-full text-sm text-gray-500
+                            file:mr-4 file:py-2 file:px-4
+                            file:rounded-full file:border-0
+                            file:text-sm file:font-semibold
+                            file:bg-indigo-50 file:text-indigo-700
+                            hover:file:bg-indigo-100"
+                            onchange="updateFileName(this)">
+                    </label>
+                    <p id="file-name-display" class="text-xs text-gray-500 italic"></p>
+
+                    <!-- Botón de Procesamiento -->
+                    <button id="process-btn" onclick="processDocument()" class="w-full sm:w-auto px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-md hover:bg-indigo-700 transition duration-150 disabled:opacity-50" disabled>
+                        <span id="process-btn-text">Procesar Documento con IA</span>
+                        <svg id="spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Sección de Vista Previa y Guardado -->
+            <section id="preview-section" class="bg-white p-6 rounded-xl shadow-lg mb-8 hidden">
+                <h2 class="text-xl font-semibold mb-4 text-green-700">Paso 2: Revisar y Guardar</h2>
+                <div id="status-message" class="p-3 mb-4 rounded-lg text-sm hidden"></div>
+                
+                <h3 class="font-medium text-gray-700 mb-2">Datos Extraídos por la IA:</h3>
+                <div id="extracted-data-preview" class="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-2 text-sm mb-4">
+                    <!-- Contenido de la vista previa aquí -->
+                </div>
+
+                <button id="save-btn" onclick="saveExtractedData()" class="w-full sm:w-auto px-6 py-2 bg-green-600 text-white font-medium rounded-lg shadow-md hover:bg-green-700 transition duration-150 disabled:opacity-50" disabled>
+                    Guardar en la Base de Datos
+                </button>
+            </section>
+
+            <!-- Sección de Generación de Informes -->
+            <section class="bg-white p-6 rounded-xl shadow-lg mb-8">
+                <h2 class="text-xl font-semibold mb-4 text-purple-700">Generación de Informes Trimestrales</h2>
+
+                <div class="flex flex-col sm:flex-row gap-4 mb-4 items-end">
+                    <!-- Selector de Año -->
+                    <div class="flex-1 w-full sm:w-auto">
+                        <label for="report-year" class="block text-sm font-medium text-gray-700">Seleccionar Año</label>
+                        <select id="report-year" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md shadow-sm">
+                            <!-- Opciones se cargarán dinámicamente -->
+                        </select>
+                    </div>
+
+                    <!-- Selector de Trimestre -->
+                    <div class="flex-1 w-full sm:w-auto">
+                        <label for="report-quarter" class="block text-sm font-medium text-gray-700">Seleccionar Trimestre</label>
+                        <select id="report-quarter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md shadow-sm">
+                            <option value="1">T1 (Ene-Mar)</option>
+                            <option value="2">T2 (Abr-Jun)</option>
+                            <option value="3">T3 (Jul-Sep)</option>
+                            <option value="4">T4 (Oct-Dic)</option>
+                        </select>
+                    </div>
+
+                    <!-- Botón de Informe -->
+                    <button id="report-btn" onclick="generateQuarterlyReport()" class="w-full sm:w-auto px-6 py-2 bg-purple-600 text-white font-medium rounded-lg shadow-md hover:bg-purple-700 transition duration-150 disabled:opacity-50">
+                        Generar Informe
+                    </button>
+                </div>
+
+                <!-- Resultados del Informe -->
+                <div id="report-results" class="p-4 bg-purple-50 border border-purple-200 rounded-lg text-sm hidden">
+                    <h3 class="font-bold text-purple-800 mb-2">Resumen Trimestral</h3>
+                    <div id="report-summary">
+                        <!-- El resumen se insertará aquí -->
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- Sección de Registros Almacenados -->
+            <section class="bg-white p-6 rounded-xl shadow-lg">
+                <h2 class="text-xl font-semibold mb-4 text-blue-700">Paso 3: Registros Almacenados</h2>
+                
+                <div id="documents-list-container" class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Oficio</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remitente</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Destinatario</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Asunto</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="documents-table-body" class="bg-white divide-y divide-gray-200">
+                            <tr id="loading-row">
+                                <td colspan="7" class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">Cargando documentos...</td>
+                            </tr>
+                            <!-- Las filas se insertarán aquí por JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+        </main>
+        
+    </div>
+
+    <!-- Modal de Autenticación -->
+    <div id="auth-modal" class="modal-overlay">
+        <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full mx-4">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Inicia Sesión para Acceder</h2>
+            
+            <div id="auth-error-message" class="p-3 mb-4 rounded-lg text-sm bg-red-100 text-red-700 hidden"></div>
+
+            <form id="email-login-form" class="space-y-4">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
+                    <input type="email" id="email" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+                </div>
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
+                    <input type="password" id="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+                </div>
+
+                <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <span id="auth-btn-text">Iniciar Sesión</span>
+                </button>
+            </form>
+
+            <p class="mt-4 text-center text-sm text-gray-600">¿Nuevo usuario? Inicia sesión o <a href="#" id="toggle-register" class="text-indigo-600 hover:text-indigo-800 font-medium">Regístrate</a></p>
+            
+            <div class="relative flex justify-center items-center my-6">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-gray-300"></div>
+                </div>
+                <div class="relative bg-white px-3 text-sm text-gray-500">
+                    o
+                </div>
+            </div>
+
+            <button onclick="signInWithGoogle()" class="w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition duration-150 flex items-center justify-center">
+                <svg class="w-5 h-5 mr-2" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><path id="a" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.3 0-13.3-6-13.3-13.3S16.7 10.4 24 10.4c3.4 0 6.5 1.3 8.9 3.5l6.6-6.6C35 4.5 29.5 2 24 2 12.4 2 2 11.4 2 23.3S12.4 44.5 24 44.5c11.2 0 21.3-8.1 21.3-21.2 0-1.4-.2-2.8-.5-4.1z"/></defs><clipPath id="b"><use xlink:href="#a"/></clipPath><path clip-path="url(#b)" fill="#FBBC04" d="M0 37V11l17 13z"/><path clip-path="url(#b)" fill="#EA4335" d="M0 11l17 13 7 6.1z"/><path clip-path="url(#b)" fill="#34A853" d="M0 37l17-13 7-6.1z"/><path clip-path="url(#b)" fill="#4285F4" d="M30 44.5l-2.4-1.9L24 37l-.7-1.1-2.2-3.4L18.7 30l-1.3-2 1.3-2.5L24 20l.7-1.1 2.2-3.4L29.3 10l.7-1.1 2.2-3.4L35 2l2-1.6L44.5 20h-7.7z"/></svg>
+                Continuar con Google
+            </button>
+        </div>
+    </div>
+
+    <!-- Script de Firebase y Lógica de la App -->
+    <script type="module">
+        // Importaciones de Firebase (Ahora incluyendo autenticación por correo/Google)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged, 
+            signInWithEmailAndPassword, 
+            createUserWithEmailAndPassword, 
+            GoogleAuthProvider, 
+            signInWithPopup,
+            signOut 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+
+        // --- *** PASO 1: CONFIGURACIÓN DE TU PROYECTO *** ---
+        
+        // 1. CONFIGURACIÓN DE FIREBASE: 
+        const YOUR_FIREBASE_CONFIG = {
+            // Reemplaza con tu configuración si es necesario, aunque se usa una genérica
+            apiKey: "AIzaSyCVKzhEX2EiYXKBaCvAFkGf_5AI43Rl2jw",
+            authDomain: "organizador-documental-con-ia.firebaseapp.com",
+            projectId: "organizador-documental-con-ia",
+            storageBucket: "organizador-documental-con-ia.firebasestorage.app",
+            messagingSenderId: "628457706738",
+            appId: "1:628457706738:web:8476271549e473f739ec6b",
+            measurementId: "G-LXFC2CS59J"
+        };
+
+        // 2. CLAVE DE LA API DE GEMINI:
+        const YOUR_GEMINI_API_KEY = ""; 
+
+        // --- Variables globales de la App ---
+        let db;
+        let auth;
+        let userId = null;
+        const COLLECTION_NAME = 'document_records'; 
+        let lastExtractedData = null;
+        let isAuthReady = false; 
+        let allDocuments = []; 
+        let isRegisterMode = false; // Para alternar entre login y registro
+
+
+        // Inicializar Firebase y Autenticación
+        async function initializeFirebase() {
+            try {
+                const app = initializeApp(YOUR_FIREBASE_CONFIG);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                // Listener del estado de autenticación
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        // Usuario AUTENTICADO
+                        userId = user.uid;
+                        document.getElementById('user-id-display').textContent = userId;
+                        document.getElementById('auth-modal').classList.add('hidden');
+                        document.getElementById('app-container').classList.remove('hidden');
+                        isAuthReady = true; 
+                        loadDocuments(); 
+                        populateYearDropdown(); 
+                        console.log("Usuario autenticado. UID:", userId);
+                    } else {
+                        // Usuario NO AUTENTICADO
+                        userId = null;
+                        document.getElementById('auth-modal').classList.remove('hidden');
+                        document.getElementById('app-container').classList.add('hidden');
+                        isAuthReady = false; 
+                        console.log("Usuario no autenticado, mostrando modal de login.");
+                    }
+                });
+
+            } catch (error) {
+                console.error("Error al inicializar Firebase. Revisa la configuración:", error);
+                // Si la app principal está oculta, muestra el error en el modal de auth
+                displayAuthError(`Error crítico al conectar con Firebase: ${error.message}`);
+            }
+        }
+
+        // --- Funciones de Utilidad y UI ---
+
+        function displayStatusMessage(message, type = 'info') {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.textContent = message;
+            statusDiv.className = 'p-3 mb-4 rounded-lg text-sm';
+            statusDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-blue-100', 'text-blue-700');
+
+            if (type === 'error') {
+                statusDiv.classList.add('bg-red-100', 'text-red-700');
+            } else if (type === 'success') {
+                statusDiv.classList.add('bg-green-100', 'text-green-700');
+            } else { // info
+                statusDiv.classList.add('bg-blue-100', 'text-blue-700');
+            }
+            statusDiv.classList.remove('hidden');
+        }
+
+        function displayAuthError(message) {
+            const errorDiv = document.getElementById('auth-error-message');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        function clearAuthError() {
+            document.getElementById('auth-error-message').classList.add('hidden');
+        }
+
+        function toggleProcessing(isProcessing) {
+            const btn = document.getElementById('process-btn');
+            const btnText = document.getElementById('process-btn-text');
+            const spinner = document.getElementById('spinner');
+
+            if (isProcessing) {
+                btn.disabled = true;
+                btnText.textContent = 'Procesando...';
+                spinner.classList.remove('hidden');
+            } else {
+                const fileInput = document.getElementById('document-upload');
+                btn.disabled = !fileInput.files.length;
+                btnText.textContent = 'Procesar Documento con IA';
+                spinner.classList.add('hidden');
+            }
+        }
+
+        window.updateFileName = function(input) {
+            const fileNameDisplay = document.getElementById('file-name-display');
+            const processBtn = document.getElementById('process-btn');
+
+            if (input.files.length > 0) {
+                fileNameDisplay.textContent = `Archivo seleccionado: ${input.files[0].name}`;
+                processBtn.disabled = false;
+            } else {
+                fileNameDisplay.textContent = 'Ningún archivo seleccionado.';
+                processBtn.disabled = true;
+            }
+            document.getElementById('preview-section').classList.add('hidden');
+        }
+        
+        function getQuarter(date) {
+            const month = date.getMonth() + 1; 
+            return Math.ceil(month / 3);
+        }
+
+        function populateYearDropdown() {
+            const yearSelect = document.getElementById('report-year');
+            const currentYear = new Date().getFullYear();
+            yearSelect.innerHTML = '';
+            
+            let option = document.createElement('option');
+            option.value = currentYear;
+            option.textContent = currentYear;
+            yearSelect.appendChild(option);
+
+            option = document.createElement('option');
+            option.value = currentYear - 1;
+            option.textContent = currentYear - 1;
+            yearSelect.appendChild(option);
+        }
+        
+        // --- Lógica de Autenticación ---
+
+        // Función para cambiar entre login y registro
+        document.getElementById('toggle-register').addEventListener('click', (e) => {
+            e.preventDefault();
+            isRegisterMode = !isRegisterMode;
+            const authBtn = document.getElementById('auth-btn-text');
+            const toggleLink = document.getElementById('toggle-register');
+            const toggleText = document.querySelector('#toggle-register').parentNode;
+
+            if (isRegisterMode) {
+                authBtn.textContent = 'Registrarse';
+                toggleLink.textContent = 'Iniciar Sesión';
+                toggleText.innerHTML = `¿Ya tienes cuenta? <a href="#" id="toggle-register" class="text-indigo-600 hover:text-indigo-800 font-medium">Iniciar Sesión</a>`;
+                document.getElementById('toggle-register').addEventListener('click', (e) => window.location.reload()); // Simple hack para re-bindear
+            } else {
+                authBtn.textContent = 'Iniciar Sesión';
+                toggleLink.textContent = 'Regístrate';
+                toggleText.innerHTML = `¿Nuevo usuario? Inicia sesión o <a href="#" id="toggle-register" class="text-indigo-600 hover:text-indigo-800 font-medium">Regístrate</a>`;
+                document.getElementById('toggle-register').addEventListener('click', (e) => window.location.reload()); // Simple hack para re-bindear
+            }
+            clearAuthError();
+        });
+
+        // Manejador de Login/Registro por Correo
+        document.getElementById('email-login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearAuthError();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const authBtn = document.getElementById('auth-btn-text');
+            authBtn.textContent = isRegisterMode ? 'Registrando...' : 'Iniciando Sesión...';
+            authBtn.parentNode.disabled = true;
+
+            try {
+                if (isRegisterMode) {
+                    await createUserWithEmailAndPassword(auth, email, password);
+                    // onAuthStateChanged manejará el cambio de vista
+                } else {
+                    await signInWithEmailAndPassword(auth, email, password);
+                    // onAuthStateChanged manejará el cambio de vista
+                }
+            } catch (error) {
+                console.error("Error de autenticación:", error);
+                let errorMessage = "Error desconocido.";
+                if (error.code === 'auth/user-not-found') errorMessage = "Usuario no encontrado. Intenta registrarte.";
+                if (error.code === 'auth/wrong-password') errorMessage = "Contraseña incorrecta.";
+                if (error.code === 'auth/email-already-in-use') errorMessage = "Este correo ya está registrado. Intenta iniciar sesión.";
+                if (error.code === 'auth/invalid-email') errorMessage = "El formato del correo es inválido.";
+                if (error.code === 'auth/weak-password') errorMessage = "La contraseña debe tener al menos 6 caracteres.";
+                
+                displayAuthError(errorMessage);
+            } finally {
+                authBtn.textContent = isRegisterMode ? 'Registrarse' : 'Iniciar Sesión';
+                authBtn.parentNode.disabled = false;
+            }
+        });
+
+        // Manejador de Login con Google
+        window.signInWithGoogle = async function() {
+            clearAuthError();
+            try {
+                const provider = new GoogleAuthProvider();
+                await signInWithPopup(auth, provider);
+                // onAuthStateChanged manejará el cambio de vista
+            } catch (error) {
+                console.error("Error de Google Auth:", error);
+                if (error.code !== 'auth/popup-closed-by-user') {
+                    displayAuthError("Error al iniciar sesión con Google. Intenta de nuevo.");
+                }
+            }
+        }
+
+        // Función de Cerrar Sesión
+        window.signOutUser = async function() {
+            try {
+                await signOut(auth);
+                // onAuthStateChanged manejará el cambio de vista a login
+                displayStatusMessage("Sesión cerrada correctamente.", 'info');
+                // Limpiar la lista de documentos mientras se carga la nueva vista
+                document.getElementById('documents-table-body').innerHTML = `<tr><td colspan="7" class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">Inicia sesión para ver tus documentos.</td></tr>`;
+                allDocuments = [];
+            } catch (error) {
+                console.error("Error al cerrar sesión:", error);
+                displayStatusMessage("Error al intentar cerrar sesión.", 'error');
+            }
+        }
+
+
+        // --- Lógica del LLM y Procesamiento ---
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        /**
+         * Llama a la API de Gemini para analizar la imagen y extraer datos.
+         */
+        window.processDocument = async function() {
+            if (!isAuthReady || !userId) {
+                displayStatusMessage("Debes iniciar sesión para procesar documentos.", 'error');
+                return;
+            }
+            
+            const fileInput = document.getElementById('document-upload');
+            if (!fileInput.files.length) {
+                displayStatusMessage("Por favor, selecciona un archivo de imagen.", 'error');
+                return;
+            }
+
+            toggleProcessing(true);
+            displayStatusMessage("Analizando el documento con Inteligencia Artificial...", 'info');
+            document.getElementById('preview-section').classList.add('hidden');
+            document.getElementById('save-btn').disabled = true;
+            lastExtractedData = null;
+
+            const file = fileInput.files[0];
+            const mimeType = file.type;
+            const base64ImageData = await fileToBase64(file);
+
+            // --- Configuración de la API de Gemini (Última versión con Puntos Clave) ---
+            const systemPrompt = "Eres un agente especializado en la extracción de datos de documentos oficiales. Tu tarea es leer la imagen proporcionada y devolver los campos solicitados en formato JSON. Si algún campo no se encuentra, usa 'N/A'. La fecha debe estar en formato YYYY-MM-DD. Todo el resultado debe ser un objeto JSON.";
+            const userQuery = "Extrae los siguientes datos de este documento (la imagen proporcionada): Fecha del Documento, Número de Oficio, Destinatario (la persona a la que se dirige), Cargo Asignado, una clasificación del Tipo de Documento (por ejemplo: 'Nombramiento', 'Declaración', 'Circular'), el Remitente/Emisor del documento, un Resumen de Asunto (una frase concisa del propósito) y una lista de 3 a 5 Puntos Clave o Datos Relevantes que un humano destacaría (por ejemplo: fechas de inicio/fin de contratos, montos de ayuda, o disposiciones legales específicas).";
+            
+            const payload = {
+                contents: [{
+                    role: "user",
+                    parts: [
+                        { text: userQuery },
+                        { inlineData: { mimeType: mimeType, data: base64ImageData } }
+                    ]
+                }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            "fecha": { "type": "STRING", "description": "Fecha en formato YYYY-MM-DD, ejemplo: 2024-11-25." },
+                            "oficio": { "type": "STRING", "description": "Número de oficio o referencia, ejemplo: 635/2024." },
+                            "destinatario": { "type": "STRING", "description": "Nombre completo del destinatario del documento." },
+                            "cargo_asignado": { "type": "STRING", "description": "Puesto o cargo principal mencionado en el documento." },
+                            "tipo_documento": { "type": "STRING", "description": "Clasificación del documento: Nombramiento, Declaración, etc." },
+                            "remitente_emisor": { "type": "STRING", "description": "Nombre completo de la entidad o persona que emite el documento." }, 
+                            "asunto_resumen": { "type": "STRING", "description": "Resumen conciso del contenido del documento (una frase)." },
+                            "puntos_clave_relevantes": { 
+                                "type": "ARRAY", 
+                                "description": "Lista de 3 a 5 datos importantes o relevantes del documento.",
+                                "items": { "type": "STRING" }
+                            } 
+                        }
+                    }
+                },
+                systemInstruction: { parts: [{ text: systemPrompt }] }
+            };
+
+            const apiKey = YOUR_GEMINI_API_KEY; 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            for (let i = 0; i < 3; i++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                    const result = await response.json();
+                    
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        
+                        const jsonString = result.candidates[0].content.parts[0].text;
+                        const data = JSON.parse(jsonString);
+                        
+                        displayExtractedData(data);
+                        lastExtractedData = data;
+                        document.getElementById('preview-section').classList.remove('hidden');
+                        document.getElementById('save-btn').disabled = false;
+                        displayStatusMessage("Extracción completada. Revisa los datos antes de guardar.", 'success');
+                        break;
+                    } else {
+                        throw new Error("Respuesta del modelo incompleta o vacía.");
+                    }
+                } catch (error) {
+                    console.error(`Intento ${i + 1} fallido:`, error);
+                    if (i === 2) {
+                        displayStatusMessage(`Error al procesar el documento después de varios intentos: ${error.message}`, 'error');
+                    } else {
+                        await new Promise(res => setTimeout(res, Math.pow(2, i) * 1000));
+                    }
+                }
+            }
+            toggleProcessing(false);
+        }
+
+        function displayExtractedData(data) {
+            const previewDiv = document.getElementById('extracted-data-preview');
+            
+            const keyPointsList = Array.isArray(data.puntos_clave_relevantes)
+                ? data.puntos_clave_relevantes.map(point => `<li class="ml-4 list-disc text-gray-800">${point}</li>`).join('')
+                : '<p class="text-gray-500 italic">No se pudieron extraer puntos clave.</p>';
+
+            previewDiv.innerHTML = `
+                <p><strong>Fecha:</strong> <span class="text-indigo-600">${data.fecha || 'N/A'}</span></p>
+                <p><strong>Tipo de Documento:</strong> <span class="text-indigo-600">${data.tipo_documento || 'N/A'}</span></p>
+                <p><strong>Número de Oficio:</strong> <span class="text-indigo-600">${data.oficio || 'N/A'}</span></p>
+                <p><strong>Remitente/Emisor:</strong> <span class="text-indigo-600">${data.remitente_emisor || 'N/A'}</span></p>
+                <p><strong>Destinatario:</strong> <span class="text-indigo-600">${data.destinatario || 'N/A'}</span></p>
+                <p><strong>Cargo Asignado:</strong> <span class="text-indigo-600">${data.cargo_asignado || 'N/A'}</span></p>
+                <p><strong>Asunto (Resumen):</strong> <span class="text-indigo-600">${data.asunto_resumen || 'N/A'}</span></p>
+                
+                <h4 class="font-bold text-gray-800 mt-3 border-t pt-2 border-gray-300">Puntos Clave:</h4>
+                <ul class="space-y-1">
+                    ${keyPointsList}
+                </ul>
+            `;
+        }
+
+
+        // --- Funciones de Firestore (Guardar y Cargar) ---
+        
+        /**
+         * Guarda el documento extraído en Firestore.
+         */
+        window.saveExtractedData = async function() {
+            if (!isAuthReady || !userId || !lastExtractedData) {
+                displayStatusMessage("Error: La aplicación no está lista o los datos no están disponibles. Asegúrate de iniciar sesión.", 'error');
+                return;
+            }
+            if (!db) {
+                displayStatusMessage("Error: La instancia de Firestore (db) no está disponible.", 'error');
+                return;
+            }
+
+            try {
+                // Ruta: /users/{userId}/document_records. Esto requiere que el usuario esté autenticado.
+                const colRef = collection(db, 'users', userId, COLLECTION_NAME);
+                
+                const dataToSave = {
+                    ...lastExtractedData,
+                    created_at: new Date().toISOString()
+                };
+
+                await addDoc(colRef, dataToSave);
+                
+                displayStatusMessage("¡Documento registrado exitosamente!", 'success');
+                document.getElementById('preview-section').classList.add('hidden');
+                document.getElementById('document-upload').value = '';
+                updateFileName(document.getElementById('document-upload'));
+                lastExtractedData = null;
+
+            } catch (e) {
+                console.error("Error al guardar el documento:", e);
+                displayStatusMessage("Error al guardar en la base de datos. Verifica las reglas de Firestore.", 'error');
+            }
+        }
+        
+        /**
+         * Carga y muestra los documentos en tiempo real usando onSnapshot.
+         */
+        function loadDocuments() {
+            if (!isAuthReady || !userId) {
+                console.log("Esperando autenticación para cargar documentos.");
+                return;
+            }
+            if (!db) {
+                console.error("Error: La instancia de Firestore (db) no está disponible.");
+                return;
+            }
+            
+            console.log(`Cargando documentos para el usuario: ${userId}`);
+
+            const tableBody = document.getElementById('documents-table-body');
+            const colRef = collection(db, 'users', userId, COLLECTION_NAME);
+            
+            onSnapshot(colRef, (snapshot) => {
+                const documents = [];
+                snapshot.forEach(doc => {
+                    documents.push({ id: doc.id, ...doc.data() });
+                });
+                
+                allDocuments = documents; 
+                documents.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+                tableBody.innerHTML = '';
+                const colspanValue = 7;
+
+                if (documents.length === 0) {
+                    tableBody.innerHTML = `<tr id="no-data-row"><td colspan="${colspanValue}" class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">Aún no hay documentos registrados.</td></tr>`;
+                    return;
+                }
+
+                documents.forEach(doc => {
+                    const row = tableBody.insertRow();
+                    row.className = 'hover:bg-gray-50';
+                    
+                    const formattedDate = doc.fecha && !doc.fecha.includes('N/A') ? new Date(doc.fecha).toLocaleDateString('es-MX') : (doc.fecha || 'N/A');
+
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${formattedDate}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${doc.tipo_documento || 'N/A'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${doc.oficio || 'N/A'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">${doc.remitente_emisor || 'N/A'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">${doc.destinatario || 'N/A'}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title="${doc.asunto_resumen || 'N/A'}">${doc.asunto_resumen || 'N/A'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="deleteDocument('${doc.id}')" class="text-red-600 hover:text-red-900 transition duration-150 p-1 rounded-md hover:bg-red-50" title="Eliminar registro">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </td>
+                    `;
+                });
+            }, (error) => {
+                console.error("Error al escuchar documentos:", error);
+                
+                // Muestra el error de permisos si ocurre (muy probable si no cambias las reglas)
+                if (error.code === 'permission-denied') {
+                    tableBody.innerHTML = `<tr><td colspan="${colspanValue}" class="px-6 py-4 whitespace-nowrap text-sm text-center text-red-600 font-bold">
+                        <p class="mb-2">❌ ERROR DE PERMISOS: Asegúrate de haber **cambiado las reglas de Firestore** como se indicó en el mensaje del asistente.</p>
+                        <p class="text-xs font-normal bg-red-50 p-2 rounded">Regla esperada: <code>allow read, write: if request.auth != null && request.auth.uid == userId;</code></p>
+                    </td></tr>`;
+                } else {
+                    tableBody.innerHTML = `<tr><td colspan="${colspanValue}" class="px-6 py-4 whitespace-nowrap text-sm text-center text-red-500">Error al cargar: ${error.message}</td></tr>`;
+                }
+            });
+        }
+        
+        /**
+         * Elimina un documento de la base de datos.
+         */
+        window.deleteDocument = async function(docId) {
+            if (!userId) {
+                displayStatusMessage("Error: Usuario no autenticado para eliminar.", 'error');
+                return;
+            }
+            if (!db) {
+                displayStatusMessage("Error: La instancia de Firestore (db) no está disponible.", 'error');
+                return;
+            }
+
+            try {
+                const docRef = doc(db, 'users', userId, COLLECTION_NAME, docId);
+                await deleteDoc(docRef);
+                displayStatusMessage("Registro eliminado correctamente.", 'info');
+            } catch (e) {
+                console.error("Error al eliminar el documento:", e);
+                displayStatusMessage("Error al eliminar el registro.", 'error');
+            }
+        }
+        
+        /**
+         * Genera el informe trimestral basado en los documentos cargados.
+         */
+        window.generateQuarterlyReport = function() {
+            const year = document.getElementById('report-year').value;
+            const quarter = parseInt(document.getElementById('report-quarter').value);
+            const reportResultsDiv = document.getElementById('report-results');
+            const reportSummaryDiv = document.getElementById('report-summary');
+
+            if (allDocuments.length === 0) {
+                reportSummaryDiv.innerHTML = `<p class="text-red-700">No hay documentos registrados para generar un informe.</p>`;
+                reportResultsDiv.classList.remove('hidden');
+                return;
+            }
+
+            const filteredDocuments = allDocuments.filter(doc => {
+                if (!doc.fecha || doc.fecha.includes('N/A')) return false;
+                
+                try {
+                    const docDate = new Date(doc.fecha);
+                    const docYear = docDate.getFullYear();
+                    const docQuarter = getQuarter(docDate);
+
+                    return docYear.toString() === year && docQuarter === quarter;
+                } catch (e) {
+                    console.warn(`Error al parsear fecha para el documento con fecha: ${doc.fecha}`);
+                    return false;
+                }
+            });
+
+            const summary = filteredDocuments.reduce((acc, doc) => {
+                const type = doc.tipo_documento && !doc.tipo_documento.includes('N/A') ? doc.tipo_documento.trim() : 'Sin Clasificación';
+                acc[type] = (acc[type] || 0) + 1;
+                return acc;
+            }, {});
+
+            let totalCount = 0;
+            let summaryHtml = '<ul class="list-disc list-inside space-y-1">';
+
+            for (const type in summary) {
+                totalCount += summary[type];
+                summaryHtml += `<li class="flex justify-between items-center">
+                                    <span class="font-medium">${type}:</span>
+                                    <span class="text-lg font-bold text-purple-600">${summary[type]}</span>
+                                </li>`;
+            }
+            summaryHtml += '</ul>';
+
+            if (totalCount === 0) {
+                 reportSummaryDiv.innerHTML = `<p class="text-red-700">No se encontraron documentos en el ${year}, Trimestre ${quarter}.</p>`;
+            } else {
+                reportSummaryDiv.innerHTML = `
+                    <div class="mb-3 border-b pb-2 border-purple-300">
+                        <p class="text-base font-semibold">Total de Documentos Registrados:</p>
+                        <p class="text-3xl font-extrabold text-purple-700">${totalCount}</p>
+                    </div>
+                    ${summaryHtml}
+                `;
+            }
+
+            reportResultsDiv.classList.remove('hidden');
+        }
+
+
+        // Iniciar la aplicación al cargar la ventana
+        initializeFirebase();
+
+    </script>
+</body>
+</html>
