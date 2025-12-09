@@ -27,7 +27,7 @@ const YOUR_FIREBASE_CONFIG = {
 };
 
 // 2. CLAVE DE LA API DE GEMINI:
-const YOUR_GEMINI_API_KEY = ""; 
+const YOUR_GEMINI_API_KEY = "AIzaSyDQOEciJhV1wGNZnWw_jr_iGzsz3lPfchc"; 
 
 // --- Variables globales de la App ---
 let db;

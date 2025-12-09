@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
+    <!-- Contenedor principal de la aplicación -->
     <div id="app-container" class="min-h-screen p-4 sm:p-8 hidden">
         <header class="text-center mb-10 flex flex-col sm:flex-row justify-between items-center">
             <div class="text-left">
@@ -26,7 +26,7 @@
         </header>
 
         <main class="max-w-4xl mx-auto">
-
+            <!-- Sección de carga y análisis del documento -->
             <section class="bg-white p-6 rounded-xl shadow-lg mb-8">
                 <h2 class="text-xl font-semibold mb-4 text-indigo-700">Paso 1: Cargar y Analizar Documento</h2>
                 
@@ -42,7 +42,7 @@
                             onchange="updateFileName(this)">
                     </label>
                     <p id="file-name-display" class="text-xs text-gray-500 italic"></p>
-
+                    <!-- Botón para procesar el documento con IA -->
                     <button id="process-btn" onclick="processDocument()" class="w-full sm:w-auto px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-md hover:bg-indigo-700 transition duration-150 disabled:opacity-50" disabled>
                         <span id="process-btn-text">Procesar Documento con IA</span>
                         <svg id="spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -53,6 +53,7 @@
                 </div>
             </section>
 
+            <!-- Sección de revisión y guardado de los datos extraídos -->
             <section id="preview-section" class="bg-white p-6 rounded-xl shadow-lg mb-8 hidden">
                 <h2 class="text-xl font-semibold mb-4 text-green-700">Paso 2: Revisar y Guardar</h2>
                 <div id="status-message" class="p-3 mb-4 rounded-lg text-sm hidden"></div>
@@ -66,6 +67,7 @@
                 </button>
             </section>
 
+            <!-- Sección de generación de informes trimestrales -->
             <section class="bg-white p-6 rounded-xl shadow-lg mb-8">
                 <h2 class="text-xl font-semibold mb-4 text-purple-700">Generación de Informes Trimestrales</h2>
 
@@ -75,7 +77,7 @@
                         <select id="report-year" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md shadow-sm">
                             </select>
                     </div>
-
+                    <!-- Seleccionar Trimestre -->
                     <div class="flex-1 w-full sm:w-auto">
                         <label for="report-quarter" class="block text-sm font-medium text-gray-700">Seleccionar Trimestre</label>
                         <select id="report-quarter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md shadow-sm">
@@ -85,20 +87,21 @@
                             <option value="4">T4 (Oct-Dic)</option>
                         </select>
                     </div>
-
+                    <!-- Botón para generar el informe -->
                     <button id="report-btn" onclick="generateQuarterlyReport()" class="w-full sm:w-auto px-6 py-2 bg-purple-600 text-white font-medium rounded-lg shadow-md hover:bg-purple-700 transition duration-150 disabled:opacity-50">
                         Generar Informe
                     </button>
                 </div>
-
+                <!-- Resultados del informe -->
                 <div id="report-results" class="p-4 bg-purple-50 border border-purple-200 rounded-lg text-sm hidden">
                     <h3 class="font-bold text-purple-800 mb-2">Resumen Trimestral</h3>
                     <div id="report-summary">
                         </div>
                 </div>
-
+                
             </section>
 
+            <!-- Sección de registros almacenados -->
             <section class="bg-white p-6 rounded-xl shadow-lg">
                 <h2 class="text-xl font-semibold mb-4 text-blue-700">Paso 3: Registros Almacenados</h2>
                 
@@ -128,12 +131,13 @@
         
     </div>
 
+    <!-- Modal de autenticación -->
     <div id="auth-modal" class="modal-overlay">
         <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full mx-4">
             <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Inicia Sesión para Acceder</h2>
             
             <div id="auth-error-message" class="p-3 mb-4 rounded-lg text-sm bg-red-100 text-red-700 hidden"></div>
-
+            <!-- Formulario de inicio de sesión -->
             <form id="email-login-form" class="space-y-4">
                 <div>
                     <label for="email" class="block text-sm font-medium text-gray-700">Correo Electrónico</label>
@@ -148,7 +152,7 @@
                     <span id="auth-btn-text">Iniciar Sesión</span>
                 </button>
             </form>
-
+            <!-- Botón para cambiar entre inicio de sesión y registro -->
             <p class="mt-4 text-center text-sm text-gray-600">¿Nuevo usuario? Inicia sesión o <a href="#" id="toggle-register" class="text-indigo-600 hover:text-indigo-800 font-medium">Regístrate</a></p>
             
             <div class="relative flex justify-center items-center my-6">
@@ -159,14 +163,15 @@
                     o
                 </div>
             </div>
-
+            <!-- Botón para iniciar sesión con Google -->
             <button onclick="signInWithGoogle()" class="w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition duration-150 flex items-center justify-center">
                 <svg class="w-5 h-5 mr-2" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><path id="a" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.3 0-13.3-6-13.3-13.3S16.7 10.4 24 10.4c3.4 0 6.5 1.3 8.9 3.5l6.6-6.6C35 4.5 29.5 2 24 2 12.4 2 2 11.4 2 23.3S12.4 44.5 24 44.5c11.2 0 21.3-8.1 21.3-21.2 0-1.4-.2-2.8-.5-4.1z"/></defs><clipPath id="b"><use xlink:href="#a"/></clipPath><path clip-path="url(#b)" fill="#FBBC04" d="M0 37V11l17 13z"/><path clip-path="url(#b)" fill="#EA4335" d="M0 11l17 13 7 6.1z"/><path clip-path="url(#b)" fill="#34A853" d="M0 37l17-13 7-6.1z"/><path clip-path="url(#b)" fill="#4285F4" d="M30 44.5l-2.4-1.9L24 37l-.7-1.1-2.2-3.4L18.7 30l-1.3-2 1.3-2.5L24 20l.7-1.1 2.2-3.4L29.3 10l.7-1.1 2.2-3.4L35 2l2-1.6L44.5 20h-7.7z"/></svg>
                 Continuar con Google
             </button>
+            
         </div>
     </div>
-
+    <!-- Script -->
     <script type="module" src="script.js"></script>
 </body>
 </html>
