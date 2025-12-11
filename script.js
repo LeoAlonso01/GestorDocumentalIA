@@ -1,13 +1,13 @@
 // Importaciones de Firebase (Ahora incluyendo autenticación por correo/Google)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { 
-    getAuth, 
-    onAuthStateChanged, 
-    signInWithEmailAndPassword, 
-    createUserWithEmailAndPassword, 
-    GoogleAuthProvider, 
+import {
+    getAuth,
+    onAuthStateChanged,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    GoogleAuthProvider,
     signInWithPopup,
-    signOut 
+    signOut
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, addDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -27,16 +27,16 @@ const YOUR_FIREBASE_CONFIG = {
 };
 
 // 2. CLAVE DE LA API DE GEMINI:
-const YOUR_GEMINI_API_KEY = "AIzaSyDQOEciJhV1wGNZnWw_jr_iGzsz3lPfchc"; 
+const YOUR_GEMINI_API_KEY = "";
 
 // --- Variables globales de la App ---
 let db;
 let auth;
 let userId = null;
-const COLLECTION_NAME = 'document_records'; 
+const COLLECTION_NAME = 'document_records';
 let lastExtractedData = null;
-let isAuthReady = false; 
-let allDocuments = []; 
+let isAuthReady = false;
+let allDocuments = [];
 let isRegisterMode = false; // Para alternar entre login y registro
 
 
@@ -55,16 +55,16 @@ async function initializeFirebase() {
                 document.getElementById('user-id-display').textContent = userId;
                 document.getElementById('auth-modal').classList.add('hidden');
                 document.getElementById('app-container').classList.remove('hidden');
-                isAuthReady = true; 
-                loadDocuments(); 
-                populateYearDropdown(); 
-                console.log("Usuario autenticado. UID:", userId);
+                isAuthReady = true;
+                loadDocuments();
+                populateYearDropdown();
+                debugLog("Usuario autenticado. UID:", userId);
             } else {
                 // Usuario NO AUTENTICADO
                 userId = null;
                 document.getElementById('auth-modal').classList.remove('hidden');
                 document.getElementById('app-container').classList.add('hidden');
-                isAuthReady = false; 
+                isAuthReady = false;
                 console.log("Usuario no autenticado, mostrando modal de login.");
             }
         });
@@ -122,7 +122,7 @@ function toggleProcessing(isProcessing) {
 }
 
 // Hacemos que la función sea global para que pueda ser llamada desde el HTML
-window.updateFileName = function(input) {
+window.updateFileName = function (input) {
     const fileNameDisplay = document.getElementById('file-name-display');
     const processBtn = document.getElementById('process-btn');
 
@@ -137,7 +137,7 @@ window.updateFileName = function(input) {
 }
 
 function getQuarter(date) {
-    const month = date.getMonth() + 1; 
+    const month = date.getMonth() + 1;
     return Math.ceil(month / 3);
 }
 
@@ -145,7 +145,7 @@ function populateYearDropdown() {
     const yearSelect = document.getElementById('report-year');
     const currentYear = new Date().getFullYear();
     yearSelect.innerHTML = '';
-    
+
     let option = document.createElement('option');
     option.value = currentYear;
     option.textContent = currentYear;
@@ -167,7 +167,7 @@ document.getElementById('auth-modal').addEventListener('click', (e) => {
         const authBtn = document.getElementById('auth-btn-text');
         const toggleLink = document.getElementById('toggle-register');
         const toggleTextContainer = toggleLink.parentNode;
-        
+
         if (isRegisterMode) {
             authBtn.textContent = 'Registrarse';
             toggleTextContainer.innerHTML = `¿Ya tienes cuenta? <a href="#" id="toggle-register" class="text-indigo-600 hover:text-indigo-800 font-medium">Iniciar Sesión</a>`;
@@ -184,7 +184,7 @@ document.getElementById('auth-modal').addEventListener('click', (e) => {
 document.getElementById('email-login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     clearAuthError();
-    
+
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const authBtn = document.getElementById('auth-btn-text');
@@ -205,7 +205,7 @@ document.getElementById('email-login-form').addEventListener('submit', async (e)
         if (error.code === 'auth/email-already-in-use') errorMessage = "Este correo ya está registrado. Intenta iniciar sesión.";
         if (error.code === 'auth/invalid-email') errorMessage = "El formato del correo es inválido.";
         if (error.code === 'auth/weak-password') errorMessage = "La contraseña debe tener al menos 6 caracteres.";
-        
+
         displayAuthError(errorMessage);
     } finally {
         authBtn.textContent = isRegisterMode ? 'Registrarse' : 'Iniciar Sesión';
@@ -214,7 +214,7 @@ document.getElementById('email-login-form').addEventListener('submit', async (e)
 });
 
 // Manejador de Login con Google (Global)
-window.signInWithGoogle = async function() {
+window.signInWithGoogle = async function () {
     clearAuthError();
     try {
         const provider = new GoogleAuthProvider();
@@ -228,7 +228,7 @@ window.signInWithGoogle = async function() {
 }
 
 // Función de Cerrar Sesión (Global)
-window.signOutUser = async function() {
+window.signOutUser = async function () {
     try {
         await signOut(auth);
         displayStatusMessage("Sesión cerrada correctamente.", 'info');
@@ -255,12 +255,12 @@ function fileToBase64(file) {
 /**
  * Llama a la API de Gemini para analizar la imagen y extraer datos. (Global)
  */
-window.processDocument = async function() {
+window.processDocument = async function () {
     if (!isAuthReady || !userId) {
         displayStatusMessage("Debes iniciar sesión para procesar documentos.", 'error');
         return;
     }
-    
+
     const fileInput = document.getElementById('document-upload');
     if (!fileInput.files.length) {
         displayStatusMessage("Por favor, selecciona un archivo de imagen.", 'error');
@@ -280,7 +280,7 @@ window.processDocument = async function() {
     // --- Configuración de la API de Gemini ---
     const systemPrompt = "Eres un agente especializado en la extracción de datos de documentos oficiales. Tu tarea es leer la imagen proporcionada y devolver los campos solicitados en formato JSON. Si algún campo no se encuentra, usa 'N/A'. La fecha debe estar en formato YYYY-MM-DD. Todo el resultado debe ser un objeto JSON.";
     const userQuery = "Extrae los siguientes datos de este documento (la imagen proporcionada): Fecha del Documento, Número de Oficio, Destinatario (la persona a la que se dirige), Cargo Asignado, una clasificación del Tipo de Documento (por ejemplo: 'Nombramiento', 'Declaración', 'Circular'), el Remitente/Emisor del documento, un Resumen de Asunto (una frase concisa del propósito) y una lista de 3 a 5 Puntos Clave o Datos Relevantes que un humano destacaría (por ejemplo: fechas de inicio/fin de contratos, montos de ayuda, o disposiciones legales específicas).";
-    
+
     const payload = {
         contents: [{
             role: "user",
@@ -299,20 +299,20 @@ window.processDocument = async function() {
                     "destinatario": { "type": "STRING", "description": "Nombre completo del destinatario del documento." },
                     "cargo_asignado": { "type": "STRING", "description": "Puesto o cargo principal mencionado en el documento." },
                     "tipo_documento": { "type": "STRING", "description": "Clasificación del documento: Nombramiento, Declaración, etc." },
-                    "remitente_emisor": { "type": "STRING", "description": "Nombre completo de la entidad o persona que emite el documento." }, 
+                    "remitente_emisor": { "type": "STRING", "description": "Nombre completo de la entidad o persona que emite el documento." },
                     "asunto_resumen": { "type": "STRING", "description": "Resumen conciso del contenido del documento (una frase)." },
-                    "puntos_clave_relevantes": { 
-                        "type": "ARRAY", 
+                    "puntos_clave_relevantes": {
+                        "type": "ARRAY",
                         "description": "Lista de 3 a 5 datos importantes o relevantes del documento.",
                         "items": { "type": "STRING" }
-                    } 
+                    }
                 }
             }
         },
         systemInstruction: { parts: [{ text: systemPrompt }] }
     };
 
-    const apiKey = YOUR_GEMINI_API_KEY; 
+    const apiKey = YOUR_GEMINI_API_KEY;
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
     for (let i = 0; i < 3; i++) {
@@ -326,14 +326,14 @@ window.processDocument = async function() {
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const result = await response.json();
-            
+
             if (result.candidates && result.candidates.length > 0 &&
                 result.candidates[0].content && result.candidates[0].content.parts &&
                 result.candidates[0].content.parts.length > 0) {
-                
+
                 const jsonString = result.candidates[0].content.parts[0].text;
                 const data = JSON.parse(jsonString);
-                
+
                 displayExtractedData(data);
                 lastExtractedData = data;
                 document.getElementById('preview-section').classList.remove('hidden');
@@ -357,7 +357,7 @@ window.processDocument = async function() {
 
 function displayExtractedData(data) {
     const previewDiv = document.getElementById('extracted-data-preview');
-    
+
     const keyPointsList = Array.isArray(data.puntos_clave_relevantes)
         ? data.puntos_clave_relevantes.map(point => `<li class="ml-4 list-disc text-gray-800">${point}</li>`).join('')
         : '<p class="text-gray-500 italic">No se pudieron extraer puntos clave.</p>';
@@ -382,7 +382,7 @@ function displayExtractedData(data) {
 /**
  * Guarda los datos extraídos en Firestore. (Global)
  */
-window.saveExtractedData = async function() {
+window.saveExtractedData = async function () {
     if (!lastExtractedData) {
         displayStatusMessage("No hay datos para guardar. Procesa un documento primero.", 'error');
         return;
@@ -407,13 +407,13 @@ window.saveExtractedData = async function() {
         });
 
         displayStatusMessage(`Registro guardado con ID: ${docRef.id}`, 'success');
-        
+
         // Limpiar después de guardar
         document.getElementById('document-upload').value = '';
         document.getElementById('file-name-display').textContent = 'Ningún archivo seleccionado.';
         document.getElementById('preview-section').classList.add('hidden');
         lastExtractedData = null;
-        
+
     } catch (e) {
         console.error("Error al añadir documento: ", e);
         displayStatusMessage("Error al intentar guardar el registro.", 'error');
@@ -427,11 +427,11 @@ window.saveExtractedData = async function() {
  * Carga los documentos del usuario en tiempo real desde Firestore.
  */
 function loadDocuments() {
-    if (!userId) return; 
+    if (!userId) return;
 
     const documentsRef = collection(db, COLLECTION_NAME);
     const tableBody = document.getElementById('documents-table-body');
-    
+
     // Configura el listener en tiempo real (onSnapshot)
     onSnapshot(documentsRef, (snapshot) => {
         tableBody.innerHTML = ''; // Limpiar la tabla
@@ -474,7 +474,7 @@ function loadDocuments() {
         if (allDocuments.length === 0) {
             tableBody.innerHTML = `<tr><td colspan="7" class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">No hay documentos registrados.</td></tr>`;
         }
-        
+
     }, (error) => {
         console.error("Error al cargar documentos:", error);
         tableBody.innerHTML = `<tr><td colspan="7" class="px-6 py-4 whitespace-nowrap text-sm text-center text-red-500">Error al cargar documentos.</td></tr>`;
@@ -486,7 +486,7 @@ function loadDocuments() {
  */
 async function deleteDocument(docId) {
     if (!confirm('¿Estás seguro de que quieres eliminar este documento?')) return;
-    
+
     try {
         await deleteDoc(doc(db, COLLECTION_NAME, docId));
         displayStatusMessage("Documento eliminado correctamente.", 'success');
@@ -502,7 +502,7 @@ async function deleteDocument(docId) {
 /**
  * Genera un resumen trimestral de los documentos. (Global)
  */
-window.generateQuarterlyReport = async function() {
+window.generateQuarterlyReport = async function () {
     if (!isAuthReady || allDocuments.length === 0) {
         displayStatusMessage("No hay documentos guardados para generar un informe.", 'error');
         return;
@@ -537,18 +537,18 @@ window.generateQuarterlyReport = async function() {
         reportBtn.textContent = 'Generar Informe';
         return;
     }
-    
+
     // 2. Preparar el texto para el LLM
-    const documentsText = documentsInQuarter.map(doc => 
+    const documentsText = documentsInQuarter.map(doc =>
         `Fecha: ${doc.fecha || 'N/A'}, Tipo: ${doc.tipo_documento || 'N/A'}, Oficio: ${doc.oficio || 'N/A'}, Remitente: ${doc.remitente_emisor || 'N/A'}, Asunto: ${doc.asunto_resumen || 'N/A'}`
     ).join('; ');
-    
+
     const prompt = `Analiza la siguiente lista de registros de documentos para el Trimestre ${quarter} del año ${year} y genera un informe de gestión conciso. El informe debe incluir: 1) El número total de documentos procesados. 2) Una lista de los 3 tipos de documentos más comunes. 3) Un resumen de las tendencias o puntos clave más relevantes observados en los asuntos o remitentes. Los datos son: ${documentsText}`;
 
     // 3. Llamada a la API de Gemini
-    const apiKey = YOUR_GEMINI_API_KEY; 
+    const apiKey = YOUR_GEMINI_API_KEY;
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-    
+
     const payload = {
         contents: [{ role: "user", parts: [{ text: prompt }] }]
     };
@@ -563,7 +563,7 @@ window.generateQuarterlyReport = async function() {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
         const result = await response.json();
-        
+
         const reportText = result.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (reportText) {
@@ -573,7 +573,7 @@ window.generateQuarterlyReport = async function() {
         } else {
             throw new Error("Respuesta del modelo vacía o incompleta.");
         }
-        
+
     } catch (error) {
         console.error("Error al generar el informe:", error);
         displayStatusMessage(`Error al generar el informe: ${error.message}. Asegúrate de que tu clave de Gemini es correcta.`, 'error');
